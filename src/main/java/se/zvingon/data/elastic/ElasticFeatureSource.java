@@ -25,8 +25,6 @@ import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.filter.visitor.ExtractBoundsFilterVisitor;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.filter.Filter;
@@ -95,7 +93,7 @@ public class ElasticFeatureSource extends ContentFeatureStore {
                     .setTypes(dataStore.getTypeNames())
                     .setSearchType(SearchType.COUNT)
                     .setQuery(matchAllQuery())
-                    .setFilter(geoFilter)
+//                    .setFilter(geoFilter)
                     .execute().get();
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -119,9 +117,7 @@ public class ElasticFeatureSource extends ContentFeatureStore {
         ElasticDataStore dataStore = getDataStore();
 
         ClusterStateRequest clusterStateRequest = Requests.clusterStateRequest()
-                .filterRoutingTable(true)
-                .filterNodes(true)
-                .filteredIndices(dataStore.indexName);
+                .indices(dataStore.indexName);
 
         ClusterState state = dataStore.elasticSearchClient.admin().cluster().state(clusterStateRequest).actionGet().getState();
         MappingMetaData metadata = state.metaData().index(dataStore.indexName).mapping(entry.getName().getLocalPart());
