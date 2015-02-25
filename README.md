@@ -47,8 +47,6 @@ mvn dependency:copy-dependencies
 cp target/dependency/lucene-* {GEOSERVER_HOME}/webapps/geoserver/WEB-INF/lib/
 cp target/dependency/elasticsearch-* {GEOSERVER_HOME}/webapps/geoserver/WEB-INF/lib/
 
-cp elasticsearch-0.17.4.jar {GEOSERVER_HOME}/webapps/geoserver/WEB-INF/lib/
-
 mvn install && cp target/elasticgeo-0.0.1-SNAPSHOT.jar ~/Downloads/geoserver-2.6.2/webapps/geoserver/WEB-INF/lib
 
 
