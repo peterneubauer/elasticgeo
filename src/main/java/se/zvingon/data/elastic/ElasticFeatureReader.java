@@ -69,7 +69,7 @@ public class ElasticFeatureReader implements FeatureReader<SimpleFeatureType, Si
                     .setTypes(dataStore.getTypeNames())
                     .setSearchType(SearchType.COUNT)
                     .setQuery(matchAllQuery())
-                    .setFilter(geoFilter)
+                    .setPostFilter(geoFilter)
                     .execute().get();
 
             count = countRequest.getHits().getTotalHits();
@@ -87,14 +87,14 @@ public class ElasticFeatureReader implements FeatureReader<SimpleFeatureType, Si
             response = dataStore.elasticSearchClient.prepareSearch(dataStore.indexName)
                     .setTypes(dataStore.getTypeNames())
                     .setQuery(matchAllQuery())
-                    .setFilter(geoFilter)
+                    .setPostFilter(geoFilter)
                     .setFrom(0)
                     .setSize(new Long(count).intValue())
                     .addFields(fields)
                     .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
                     .execute().get();
 
-            System.out.println(response.hits().getTotalHits());
+            System.out.println(response.getHits().getTotalHits());
             searchHitIterator = response.getHits().iterator();
         } catch (InterruptedException e) {
             e.printStackTrace();

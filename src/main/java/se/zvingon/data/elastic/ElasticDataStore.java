@@ -8,6 +8,9 @@ import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.collect.ImmutableList;
+import org.elasticsearch.common.collect.ImmutableOpenMap;
+import org.elasticsearch.common.hppc.cursors.ObjectCursor;
+import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
@@ -81,21 +84,19 @@ public class ElasticDataStore extends ContentDataStore {
     }
 
     private void initTransportClient() {
-        this.elasticSearchClient = new TransportClient().addTransportAddress(new InetSocketTransportAddress(searchHost, hostPort));
+        this.elasticSearchClient = new TransportClient(ImmutableSettings.settingsBuilder().put("cluster.name", clusterName)).addTransportAddress(new InetSocketTransportAddress(searchHost, hostPort));
     }
 
     private void cacheTypeNames() {
         ClusterStateRequest clusterStateRequest = Requests.clusterStateRequest()
-                .filterRoutingTable(true)
-                .filterNodes(true)
-                .filteredIndices(indexName);
+                .indices(indexName);
 
-        ClusterState state = elasticSearchClient.admin().cluster().state(clusterStateRequest).actionGet().getState();
-        Map<String, MappingMetaData> mappings = state.metaData().index(indexName).mappings();
-        Iterator<String> elasticTypes = mappings.keySet().iterator();
+        ClusterState state = this.elasticSearchClient.admin().cluster().state(clusterStateRequest).actionGet().getState();
+        ImmutableOpenMap<String, MappingMetaData> mappings = state.metaData().index(indexName).mappings();
+        Iterator<ObjectCursor<String>> elasticTypes = mappings.keys().iterator();
         Vector names = new Vector<Name>();
         while (elasticTypes.hasNext()) {
-            names.add(new NameImpl(elasticTypes.next()));
+            names.add(new NameImpl(elasticTypes.next().value));
         }
         cachedTypeNames = ImmutableList.copyOf(names);
     }
@@ -123,9 +124,13 @@ public class ElasticDataStore extends ContentDataStore {
 
     @Override
     public void dispose() {
-        this.elasticSearchClient.close();
-        this.elasticSearchNode.stop();
-        this.elasticSearchNode.close();
+        if(elasticSearchClient!=null) {
+            this.elasticSearchClient.close();
+        }
+        if (elasticSearchNode != null) {
+            this.elasticSearchNode.stop();
+            this.elasticSearchNode.close();
+        }
         super.dispose();
     }
 
