@@ -31,8 +31,14 @@ public class ElasticDataStoreFactory implements DataStoreFactorySpi {
     }
 
     public Param[] getParametersInfo() {
-        return new Param[]{HOSTNAME, HOSTPORT, INDEX_NAME, CLUSTERNAME, LOCAL_NODE, STORE_DATA, FIELDS};
+        return new Param[]{HOSTNAME, HOSTPORT, INDEX_NAME, CLUSTERNAME, LOCAL_NODE, STORE_DATA, FIELDS, NAMESPACE};
     }
+
+    /**
+     * Field that holds the namespace
+     */
+    public static final Param NAMESPACE = new Param("namespace", String.class, "Namespace prefix",
+            false, "elasticsearch");
 
     public boolean canProcess(Map<String, Serializable> params) {
         try {
@@ -61,6 +67,7 @@ public class ElasticDataStoreFactory implements DataStoreFactorySpi {
         String searchHost = (String) HOSTNAME.lookUp(params);
         String indexName = (String) INDEX_NAME.lookUp(params);
         String clusterName = (String) CLUSTERNAME.lookUp(params);
+        String nameSpace = (String) NAMESPACE.lookUp(params);
         Integer hostPort = (Integer) HOSTPORT.lookUp(params);
         Boolean storeData = (Boolean) STORE_DATA.lookUp(params);
         if (storeData == null)
@@ -75,7 +82,9 @@ public class ElasticDataStoreFactory implements DataStoreFactorySpi {
             fieldList = Arrays.asList(fields.split(","));
         }
 
-        return new ElasticDataStore(searchHost, hostPort, indexName, clusterName, localNode, storeData, fieldList);
+        ElasticDataStore elasticDataStore = new ElasticDataStore(searchHost, hostPort, indexName, clusterName, localNode, storeData, fieldList);
+        elasticDataStore.setNamespaceURI(nameSpace);
+        return elasticDataStore;
     }
 
     public DataStore createNewDataStore(Map<String, Serializable> params) throws IOException {

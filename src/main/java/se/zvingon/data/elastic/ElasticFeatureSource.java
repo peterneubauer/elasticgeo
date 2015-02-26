@@ -93,7 +93,7 @@ public class ElasticFeatureSource extends ContentFeatureStore {
                     .setTypes(dataStore.getTypeNames())
                     .setSearchType(SearchType.COUNT)
                     .setQuery(matchAllQuery())
-//                    .setFilter(geoFilter)
+                    .setPostFilter(geoFilter)
                     .execute().get();
         } catch (InterruptedException e) {
             e.printStackTrace();
