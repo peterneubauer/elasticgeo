@@ -60,7 +60,7 @@ public class ElasticFeatureReader implements FeatureReader<SimpleFeatureType, Si
         Envelope result = (Envelope) filter.accept(visitor, DefaultGeographicCRS.WGS84);
         System.out.println("Read based on envelope: " + result.toString());
 
-        FilterBuilder geoFilter = geoBoundingBoxFilter("location")
+        FilterBuilder geoFilter = geoBoundingBoxFilter(dataStore.geofield)
                 .topLeft(result.getMaxY(), result.getMinX())
                 .bottomRight(result.getMinY(), result.getMaxX())
                 .cache(true);
@@ -90,7 +90,7 @@ public class ElasticFeatureReader implements FeatureReader<SimpleFeatureType, Si
                     .setPostFilter(geoFilter)
                     .setFrom(0)
                     .setSize(new Long(count).intValue())
-                    .addFields(fields)
+                    .addFields(new String[]{"_source"})
                     .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
                     .execute().get();
 
@@ -135,12 +135,13 @@ public class ElasticFeatureReader implements FeatureReader<SimpleFeatureType, Si
 
         for (AttributeType attributeType : type.getTypes()) {
             String propertyKey = attributeType.getName().getLocalPart();
-            if (hit.getFields().containsKey(propertyKey)) {
-                SearchHitField field = hit.getFields().get(propertyKey);
+            Map<String, Object> source = hit.getSource();
+            if (source.containsKey(propertyKey)) {
+                Object field = source.get(propertyKey);
 
                 if (Point.class.equals(attributeType.getBinding())) {
                     Coordinate coordinate = new Coordinate();
-                    Map<String, Object> location = (Map<String, Object>) field.getValue();
+                    Map<String, Object> location = (Map<String, Object>) field;
                     // this fix this
 
                     if (location.containsKey("lat") && location.containsKey("lon")) {
@@ -149,7 +150,7 @@ public class ElasticFeatureReader implements FeatureReader<SimpleFeatureType, Si
                         builder.set(propertyKey, geometryFactory.createPoint(coordinate));
                     }
                 } else {
-                    Object value = field.getValue();
+                    Object value = field;
                     if (value != null) {
                         builder.set(propertyKey, value);
                     }

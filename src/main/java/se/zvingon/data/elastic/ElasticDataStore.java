@@ -40,6 +40,7 @@ public class ElasticDataStore extends ContentDataStore {
     // constructor start
     String searchHost;
     String indexName;
+    String geofield;
     String query;
     Integer hostPort;
     boolean localNode;
@@ -55,16 +56,20 @@ public class ElasticDataStore extends ContentDataStore {
                             Integer hostPort,
                             String indexName,
                             String clusterName,
+                            String geofield,
                             boolean localNode,
                             boolean storeData,
+                            String namespaceURI,
                             List<String> fields) {
         this.searchHost = searchHost;
         this.hostPort = hostPort;
         this.indexName = indexName;
+        this.geofield = geofield;
         this.localNode = localNode;
         this.storeData = storeData;
         this.clusterName = clusterName;
         this.fields = fields;
+        setNamespaceURI(namespaceURI);
         if (fields != null && fields.size() > 0) {
             useFields = true;
         }
@@ -84,7 +89,8 @@ public class ElasticDataStore extends ContentDataStore {
     }
 
     private void initTransportClient() {
-        this.elasticSearchClient = new TransportClient(ImmutableSettings.settingsBuilder().put("cluster.name", clusterName)).addTransportAddress(new InetSocketTransportAddress(searchHost, hostPort));
+        ImmutableSettings.Builder settings = ImmutableSettings.settingsBuilder().put("cluster.name", clusterName);
+        this.elasticSearchClient = new TransportClient(settings).addTransportAddress(new InetSocketTransportAddress(searchHost, hostPort));
     }
 
     private void cacheTypeNames() {
@@ -96,7 +102,7 @@ public class ElasticDataStore extends ContentDataStore {
         Iterator<ObjectCursor<String>> elasticTypes = mappings.keys().iterator();
         Vector names = new Vector<Name>();
         while (elasticTypes.hasNext()) {
-            names.add(new NameImpl(elasticTypes.next().value));
+            names.add(new NameImpl(getNamespaceURI(), elasticTypes.next().value));
         }
         cachedTypeNames = ImmutableList.copyOf(names);
     }

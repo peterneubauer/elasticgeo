@@ -82,7 +82,7 @@ public class ElasticFeatureSource extends ContentFeatureStore {
         FilterVisitor visitor = ExtractBoundsFilterVisitor.BOUNDS_VISITOR;
         Envelope result = (Envelope) filter.accept(visitor, DefaultGeographicCRS.WGS84);
 
-        FilterBuilder geoFilter = geoBoundingBoxFilter("location")
+        FilterBuilder geoFilter = geoBoundingBoxFilter(dataStore.geofield)
                 .topLeft(result.getMaxY(), result.getMinX())
                 .bottomRight(result.getMinY(), result.getMaxX())
                 .cache(true);
