@@ -6,10 +6,13 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.client.Requests;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.cluster.ClusterState;
+import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
+import org.elasticsearch.cluster.metadata.MetaData;
 import org.elasticsearch.common.collect.ImmutableList;
 import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.hppc.cursors.ObjectCursor;
+import org.elasticsearch.common.hppc.cursors.ObjectObjectCursor;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.node.Node;
@@ -30,6 +33,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
+import java.util.logging.Level;
 
 import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
 
@@ -86,6 +90,7 @@ public class ElasticDataStore extends ContentDataStore {
         this.elasticSearchNode = nodeBuilder.build();
         elasticSearchNode.start();
         this.elasticSearchClient = elasticSearchNode.client();
+        System.out.println("initLocalNodeAndClient - " + elasticSearchClient);
     }
 
     private void initTransportClient() {
@@ -98,7 +103,9 @@ public class ElasticDataStore extends ContentDataStore {
                 .indices(indexName);
 
         ClusterState state = this.elasticSearchClient.admin().cluster().state(clusterStateRequest).actionGet().getState();
-        ImmutableOpenMap<String, MappingMetaData> mappings = state.metaData().index(indexName).mappings();
+        MetaData indexMetaDatas = state.metaData();
+        IndexMetaData index = indexMetaDatas.index(indexName);
+        ImmutableOpenMap<String, MappingMetaData> mappings = index.mappings();
         Iterator<ObjectCursor<String>> elasticTypes = mappings.keys().iterator();
         Vector names = new Vector<Name>();
         while (elasticTypes.hasNext()) {
@@ -130,7 +137,7 @@ public class ElasticDataStore extends ContentDataStore {
 
     @Override
     public void dispose() {
-        if(elasticSearchClient!=null) {
+        if (elasticSearchClient != null) {
             this.elasticSearchClient.close();
         }
         if (elasticSearchNode != null) {
