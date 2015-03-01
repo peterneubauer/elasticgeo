@@ -7,6 +7,7 @@ import com.vividsolutions.jts.geom.Point;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.index.query.FilterBuilder;
+import org.elasticsearch.index.query.LimitFilterBuilder;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHitField;
 import org.geotools.data.FeatureReader;
@@ -35,6 +36,7 @@ import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 
 public class ElasticFeatureReader implements FeatureReader<SimpleFeatureType, SimpleFeature> {
 
+    private static final int MAX_COUNT = 50;
     protected ContentState state;
     private SimpleFeature next;
     protected SimpleFeatureBuilder builder;
@@ -78,11 +80,6 @@ public class ElasticFeatureReader implements FeatureReader<SimpleFeatureType, Si
             System.out.println("Trying to retrieve: ");
 
             List<AttributeType> attributes = type.getTypes();
-            String[] fields = new String[type.getTypes().size()];
-            for (int i = 0; i < attributes.size(); i++) {
-                fields[i] = attributes.get(i).getName().getLocalPart();
-                System.out.print(fields[i] + " ");
-            }
 
             response = dataStore.elasticSearchClient.prepareSearch(dataStore.indexName)
                     .setTypes(dataStore.getTypeNames())
@@ -90,6 +87,7 @@ public class ElasticFeatureReader implements FeatureReader<SimpleFeatureType, Si
                     .setPostFilter(geoFilter)
                     .setFrom(0)
                     .setSize(new Long(count).intValue())
+                    .setSize(MAX_COUNT)
                     .addFields(new String[]{"_source"})
                     .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
                     .execute().get();
