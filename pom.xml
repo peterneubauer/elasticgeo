@@ -25,8 +25,7 @@
     </build>
 
     <properties>
-        <geotools.version>2.7.2</geotools.version>
-        <!--geotools.version>8.0-M0</geotools.version-->
+        <geotools.version>13.1</geotools.version>
     </properties>
 
     <dependencies>
@@ -34,6 +33,12 @@
             <groupId>org.geotools</groupId>
             <artifactId>gt-api</artifactId>
             <version>${geotools.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.geotools</groupId>
+            <artifactId>gt-cql</artifactId>
+            <version>${geotools.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.geotools</groupId>
@@ -55,7 +60,13 @@
         <dependency>
             <groupId>org.elasticsearch</groupId>
             <artifactId>elasticsearch</artifactId>
-            <version>1.3.2</version>
+            <version>1.5.2</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.8.1</version>
+            <scope>test</scope>
         </dependency>
 
 

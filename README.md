@@ -46,6 +46,7 @@ mvn dependency:copy-dependencies
 
 cp target/dependency/lucene-* {GEOSERVER_HOME}/webapps/geoserver/WEB-INF/lib/
 cp target/dependency/elasticsearch-* {GEOSERVER_HOME}/webapps/geoserver/WEB-INF/lib/
+cp target/dependency/spatial4j-* {GEOSERVER_HOME}/webapps/geoserver/WEB-INF/lib/
 
 mvn install && cp target/elasticgeo-0.0.1-SNAPSHOT.jar {GEOSERVER_HOME}/webapps/geoserver/WEB-INF/lib
 
