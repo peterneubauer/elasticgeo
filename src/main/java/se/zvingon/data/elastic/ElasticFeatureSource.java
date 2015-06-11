@@ -9,10 +9,13 @@ import org.elasticsearch.client.Requests;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
+import org.elasticsearch.common.geo.builders.ShapeBuilder;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.index.query.FilterBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.geotools.data.DataStore;
 import org.geotools.data.FeatureReader;
 import org.geotools.data.FeatureWriter;
@@ -34,6 +37,7 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Logger;
 
 import static org.elasticsearch.index.query.FilterBuilders.geoBoundingBoxFilter;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
@@ -44,6 +48,7 @@ public class ElasticFeatureSource extends ContentFeatureStore {
     public ElasticFeatureSource(ContentEntry entry, Query query) {
         super(entry, query);
     }
+    Logger logger = Logger.getLogger(ElasticFeatureReader.class.getSimpleName());
 
     /**
      * Access parent datastore
@@ -76,24 +81,25 @@ public class ElasticFeatureSource extends ContentFeatureStore {
     }
 
     protected int getCountInternal(Query query) throws IOException {
-        System.out.println("getCountInternal");
+        logger.info("getCountInternal");
         ElasticDataStore dataStore = getDataStore();
         Filter filter = query.getFilter();
         FilterVisitor visitor = ExtractBoundsFilterVisitor.BOUNDS_VISITOR;
         Envelope result = (Envelope) filter.accept(visitor, DefaultGeographicCRS.WGS84);
-
-        FilterBuilder geoFilter = geoBoundingBoxFilter(dataStore.geofield)
-                .topLeft(result.getMaxY(), result.getMinX())
-                .bottomRight(result.getMinY(), result.getMaxX())
-                .cache(true);
+        //make a default query
+        QueryBuilder searchforFilter = QueryBuilders.boolQuery().
+                must(new ELSAdapter().getSearchforFilter(filter))
+                .must(QueryBuilders.geoShapeQuery("l_shape", ShapeBuilder.newEnvelope()
+                                .topLeft(result.getMinX() == Double.NEGATIVE_INFINITY ? -180 : result.getMinX(), result.getMaxY() == Double.POSITIVE_INFINITY ? 90 : result.getMaxY())
+                                .bottomRight(result.getMaxX() == Double.POSITIVE_INFINITY ? 180 : result.getMaxX(), result.getMinY() == Double.NEGATIVE_INFINITY ? -90 : result.getMinY())
+                ));
 
         SearchResponse countRequest = null;
         try {
             countRequest = dataStore.elasticSearchClient.prepareSearch(dataStore.indexName)
                     .setTypes(dataStore.getTypeNames())
                     .setSearchType(SearchType.COUNT)
-                    .setQuery(matchAllQuery())
-                    .setPostFilter(geoFilter)
+                    .setQuery(searchforFilter)
                     .execute().get();
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -105,7 +111,7 @@ public class ElasticFeatureSource extends ContentFeatureStore {
 
     protected FeatureReader<SimpleFeatureType, SimpleFeature> getReaderInternal(Query query)
             throws IOException {
-        System.out.println("getReaderInternal");
+        logger.info("getReaderInternal");
         return new ElasticFeatureReader(getState(), query);
     }
 
@@ -134,7 +140,7 @@ public class ElasticFeatureSource extends ContentFeatureStore {
             Map<String, Map<String, Object>> properties = (Map<String, Map<String, Object>>) mapping.get("properties");
 
             for (String propertyKey : properties.keySet()) {
-                if(dataStore.useFields && !dataStore.getFields().contains(propertyKey))
+                if (dataStore.useFields && !dataStore.getFields().contains(propertyKey))
                     continue;
 
                 Map<String, Object> property = properties.get(propertyKey);
@@ -165,13 +171,16 @@ public class ElasticFeatureSource extends ContentFeatureStore {
                     if ("boolean".equalsIgnoreCase(propertyType)) {
                         builder.add(propertyKey, Boolean.class);
                     }
+                    if ("nested".equalsIgnoreCase(propertyType)) {
+                        builder.add(propertyKey, Map.class);
+                    }
                 }
             }
         }
-    final SimpleFeatureType SCHEMA = builder.buildFeatureType();
-    System.out.println("buildFeatureType:" + SCHEMA.toString());
-    return SCHEMA;
-}
+        final SimpleFeatureType SCHEMA = builder.buildFeatureType();
+        System.out.println("buildFeatureType:" + SCHEMA.toString());
+        return SCHEMA;
+    }
 
     @Override
     protected FeatureWriter<SimpleFeatureType, SimpleFeature> getWriterInternal(Query query, int flags) throws IOException {
