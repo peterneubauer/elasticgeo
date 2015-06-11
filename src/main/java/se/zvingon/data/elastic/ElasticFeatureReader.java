@@ -7,7 +7,6 @@ import com.vividsolutions.jts.geom.Point;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.common.geo.builders.ShapeBuilder;
-import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
@@ -31,8 +30,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Logger;
-
-import static org.elasticsearch.index.query.FilterBuilders.geoBoundingBoxFilter;
 
 
 public class ElasticFeatureReader implements FeatureReader<SimpleFeatureType, SimpleFeature> {
@@ -82,8 +79,8 @@ public class ElasticFeatureReader implements FeatureReader<SimpleFeatureType, Si
 
             count = countRequest.getHits().getTotalHits();
 
-            System.out.println("Found " + count + " features matching bbox");
-            System.out.println("Trying to retrieve: ");
+            logger.info("Found " + count + " features matching bbox");
+            logger.info("Trying to retrieve: ");
 
             List<AttributeType> attributes = type.getTypes();
 
