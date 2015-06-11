@@ -6,10 +6,11 @@ import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.Point;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
+import org.elasticsearch.common.geo.builders.ShapeBuilder;
 import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.LimitFilterBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.SearchHitField;
 import org.geotools.data.FeatureReader;
 import org.geotools.data.Query;
 import org.geotools.data.store.ContentState;
@@ -29,14 +30,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Logger;
 
 import static org.elasticsearch.index.query.FilterBuilders.geoBoundingBoxFilter;
-import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 
 
 public class ElasticFeatureReader implements FeatureReader<SimpleFeatureType, SimpleFeature> {
 
-    private static final int MAX_COUNT = 50;
     protected ContentState state;
     private SimpleFeature next;
     protected SimpleFeatureBuilder builder;
@@ -46,6 +46,9 @@ public class ElasticFeatureReader implements FeatureReader<SimpleFeatureType, Si
     long count = 0;
     SearchResponse response;
     Iterator<SearchHit> searchHitIterator;
+    private final Filter filter;
+
+    Logger logger = Logger.getLogger(ElasticFeatureReader.class.getSimpleName());
 
     public ElasticFeatureReader(ContentState contentState, Query query) throws IOException {
 
@@ -56,22 +59,25 @@ public class ElasticFeatureReader implements FeatureReader<SimpleFeatureType, Si
         geometryFactory = JTSFactoryFinder.getGeometryFactory(null);
         row = 1;
         dataStore = (ElasticDataStore) contentState.getEntry().getDataStore();
-
-        Filter filter = query.getFilter();
+        ELSAdapter elsAdapter = new ELSAdapter();
+        filter = query.getFilter();
         FilterVisitor visitor = ExtractBoundsFilterVisitor.BOUNDS_VISITOR;
         Envelope result = (Envelope) filter.accept(visitor, DefaultGeographicCRS.WGS84);
         System.out.println("Read based on envelope: " + result.toString());
 
-        FilterBuilder geoFilter = geoBoundingBoxFilter(dataStore.geofield)
-                .topLeft(result.getMaxY(), result.getMinX())
-                .bottomRight(result.getMinY(), result.getMaxX())
-                .cache(true);
         try {
+
+            //make a default query
+            QueryBuilder searchforFilter = QueryBuilders.boolQuery().
+                    must(elsAdapter.getSearchforFilter(filter))
+                    .must(QueryBuilders.geoShapeQuery("l_shape", ShapeBuilder.newEnvelope()
+                                    .topLeft(result.getMinX() == Double.NEGATIVE_INFINITY ? -180 : result.getMinX(), result.getMaxY() == Double.POSITIVE_INFINITY ? 90 : result.getMaxY())
+                                    .bottomRight(result.getMaxX() == Double.POSITIVE_INFINITY ? 180 : result.getMaxX(), result.getMinY() == Double.NEGATIVE_INFINITY ? -90 : result.getMinY())
+                    ));
             SearchResponse countRequest = dataStore.elasticSearchClient.prepareSearch(dataStore.indexName)
                     .setTypes(dataStore.getTypeNames())
                     .setSearchType(SearchType.COUNT)
-                    .setQuery(matchAllQuery())
-                    .setPostFilter(geoFilter)
+                    .setQuery(searchforFilter)
                     .execute().get();
 
             count = countRequest.getHits().getTotalHits();
@@ -83,11 +89,9 @@ public class ElasticFeatureReader implements FeatureReader<SimpleFeatureType, Si
 
             response = dataStore.elasticSearchClient.prepareSearch(dataStore.indexName)
                     .setTypes(dataStore.getTypeNames())
-                    .setQuery(matchAllQuery())
-                    .setPostFilter(geoFilter)
+                    .setQuery(searchforFilter)
                     .setFrom(0)
-                    .setSize(new Long(count).intValue())
-                    .setSize(MAX_COUNT)
+                    .setSize(Math.min(new Long(count).intValue(), query.getMaxFeatures()))
                     .addFields(new String[]{"_source"})
                     .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
                     .execute().get();
