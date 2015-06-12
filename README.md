@@ -38,8 +38,7 @@ First stab on elasticsearch GeoTools datastore.
 
 Based on the tutorial for a CSV DataStore in the GeoTools guide.
 
-Installation in Geoserver 2.1.1
--------------------------------
+###Installation in Geoserver 2.1.1
 
 There is a problem with the different logging implementations in ES and GeoServer (the binary distribution)
 As a workaround I upgraded to SLF4J 1.6.1 in both {GEOSERVER_HOME}/lib and in {GEOSERVER_HOME}/webapps/geoserver/WEB-INF/lib.
@@ -71,8 +70,7 @@ Add
 -   slf4j-api-1.6.1.jar
 -   slf4j-log4j12-1.6.1.jar
 
-Dependencies
-------------
+###Dependencies
 
     mvn dependency:copy-dependencies
 
@@ -83,8 +81,7 @@ Dependencies
 
     mvn install && cp target/elasticgeo-0.0.1-SNAPSHOT.jar {GEOSERVER_HOME}/webapps/geoserver/WEB-INF/lib
 
-Debugging Geoserver
--------------------
+###Debugging Geoserver
 
     export JAVA_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -XX:MaxPermSize=128m -Xmx1g -server" && {GEOSERVER_HOME}/bin/startup.sh
 
