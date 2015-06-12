@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ElasticGeo
 ==========
 
@@ -32,11 +33,6 @@ Elasticsearch under [Apache License v 2.0](https://github.com/elastic/elasticsea
 ###Documentation
 
 https://github.com/ngageoint/elasticgeo/blob/master/gs-web-elasticsearch/doc/index.rst
-
-
-First stab on elasticsearch GeoTools datastore.
-
-Based on the tutorial for a CSV DataStore in the GeoTools guide.
 
 ###Installation in Geoserver 2.1.1
 
